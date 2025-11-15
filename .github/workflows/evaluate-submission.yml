@@ -1,0 +1,170 @@
+name: Evaluate Agent Submission
+
+on:
+  pull_request:
+    paths:
+      - 'submissions/**'
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      # TODO Remove this step once the images are public
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install tomli
+
+      - name: Detect submission directory
+        id: detect
+        run: |
+          # Get files changed in this PR
+          git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          # Find scenario.toml files in submissions/
+          SCENARIO_FILES=$(echo "$CHANGED_FILES" | grep -E '^submissions/[^/]+/[^/]+/[^/]+/scenario\.toml$' || true)
+
+          if [ -z "$SCENARIO_FILES" ]; then
+            echo "No scenario.toml files found in submissions/ directory"
+            exit 1
+          fi
+
+          # Take the first scenario.toml found
+          SCENARIO_PATH=$(echo "$SCENARIO_FILES" | head -n 1)
+          SUBMISSION_DIR=$(dirname "$SCENARIO_PATH")
+
+          echo "scenario_path=$SCENARIO_PATH" >> $GITHUB_OUTPUT
+          echo "submission_dir=$SUBMISSION_DIR" >> $GITHUB_OUTPUT
+
+          # Extract path components
+          USERNAME=$(echo "$SUBMISSION_DIR" | cut -d'/' -f2)
+          AGENT_SLUG=$(echo "$SUBMISSION_DIR" | cut -d'/' -f3)
+          RUN_ID=$(echo "$SUBMISSION_DIR" | cut -d'/' -f4)
+
+          echo "username=$USERNAME" >> $GITHUB_OUTPUT
+          echo "agent_slug=$AGENT_SLUG" >> $GITHUB_OUTPUT
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
+          echo "Found submission: $SUBMISSION_DIR"
+          echo "  Username: $USERNAME"
+          echo "  Agent: $AGENT_SLUG"
+          echo "  Run ID: $RUN_ID"
+
+      - name: Create output directory
+        run: mkdir -p output
+
+      - name: Validate scenario.toml exists
+        run: |
+          if [ ! -f "${{ steps.detect.outputs.scenario_path }}" ]; then
+            echo "Error: scenario.toml not found at ${{ steps.detect.outputs.scenario_path }}"
+            exit 1
+          fi
+          # Save scenario.toml to output directory for later use
+          cp "${{ steps.detect.outputs.scenario_path }}" output/scenario.toml
+          echo "Validated: scenario.toml exists and saved to output directory"
+
+      - name: Generate Docker Compose files
+        run: |
+          python generate_compose.py "${{ steps.detect.outputs.scenario_path }}" --output-dir .
+          echo "Generated docker-compose.yml and runner-scenario.toml"
+
+      - name: Run evaluation
+        # IMPORTANT: Environment variables required by the agents must be set here
+        # from GitHub Secrets. The docker-compose.yml file uses ${VAR_NAME} substitution
+        # for required environment variables defined in scenario.toml.
+        #
+        # Remember to add all required environment variables as exports before running docker
+        # compose
+        #
+        # Example: If your scenario.toml requires GOOGLE_API_KEY, add it to repository
+        # secrets and uncomment the following two lines
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          docker compose up --abort-on-container-exit
+          echo "Evaluation completed"
+
+      - name: Check for score.json
+        run: |
+          if [ ! -f output/score.json ]; then
+            echo "Error: score.json not generated"
+            exit 1
+          fi
+          echo "Score file generated successfully"
+          cat output/score.json
+
+      - name: Checkout fresh branch from main
+        run: |
+          git fetch origin main
+          git checkout -b "submission-${{ steps.detect.outputs.username }}-${{ steps.detect.outputs.agent_slug }}-${{ steps.detect.outputs.run_id }}" origin/main
+
+      - name: Create submission directory
+        run: |
+          mkdir -p "${{ steps.detect.outputs.submission_dir }}"
+
+      - name: Copy files to submission directory
+        run: |
+          # Copy scenario.toml from output directory (saved during validation)
+          cp output/scenario.toml "${{ steps.detect.outputs.submission_dir }}/scenario.toml"
+
+          # Copy score.json
+          cp output/score.json "${{ steps.detect.outputs.submission_dir }}/score.json"
+
+          echo "Copied files to ${{ steps.detect.outputs.submission_dir }}"
+
+      - name: Commit and push results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "${{ steps.detect.outputs.submission_dir }}"
+          git commit -m "Add evaluation results for ${{ steps.detect.outputs.username }}/${{ steps.detect.outputs.agent_slug }}/${{ steps.detect.outputs.run_id }}"
+
+          git push origin "submission-${{ steps.detect.outputs.username }}-${{ steps.detect.outputs.agent_slug }}-${{ steps.detect.outputs.run_id }}"
+
+          echo "Committed and pushed results to branch: submission-${{ steps.detect.outputs.username }}-${{ steps.detect.outputs.agent_slug }}-${{ steps.detect.outputs.run_id }}"
+
+      - name: Upload score.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: score-${{ steps.detect.outputs.username }}-${{ steps.detect.outputs.agent_slug }}-${{ steps.detect.outputs.run_id }}
+          path: output/score.json
+
+      - name: Cleanup Docker
+        if: always()
+        run: |
+          docker compose down -v || true
+
+      - name: Summary
+        run: |
+          echo "## Evaluation Complete ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Submission:** \`${{ steps.detect.outputs.submission_dir }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          cat output/score.json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Results have been committed to branch: \`submission-${{ steps.detect.outputs.username }}-${{ steps.detect.outputs.agent_slug }}-${{ steps.detect.outputs.run_id }}\`" >> $GITHUB_STEP_SUMMARY
