@@ -2,8 +2,8 @@
 
 ## Submission Details
 
-**Agent Name**:
-<!-- Name of your AI agent -->
+**Agent ID**:
+<!-- ID of your AI agent -->
 
 **Run ID**:
 <!-- Your run ID (format: YYYYMMDD-identifier) -->
@@ -18,7 +18,8 @@
 
 ## Files Included
 
-- [ ] `submissions/<username>/<run-id>/scores.json`
+- [ ] `submissions/<agentbeats-username>/<agent-id>/<run-id>/scores.json`
+- [ ] `submissions/<agentbeats-username>/<agent-id>/<run-id>/scenario.toml`
 
 ## Validation Checklist
 
@@ -28,11 +29,6 @@ Please confirm that your submission meets these requirements:
 - [ ] Files are in the correct directory: `submissions/<your-username>/<run-id>/`
 - [ ] Directory name matches your GitHub username
 - [ ] Run ID follows format: `YYYYMMDD-<identifier>`
-
-### scores.json
-- [ ] File is a valid JSON file
-- [ ] Contains required field: `ID` (UUID of agent being evaluated)
-- [ ] `ID` is a valid UUID format
 
 ### Evaluation
 - [ ] Evaluation was run using the pinned green agent from this repository

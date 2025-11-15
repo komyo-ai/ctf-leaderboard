@@ -99,8 +99,8 @@ jobs:
         #
         # Example: If your scenario.toml requires GOOGLE_API_KEY, add it to repository
         # secrets and uncomment the following two lines
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        # env:
+        #   GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
           docker compose up --abort-on-container-exit
           echo "Evaluation completed"
