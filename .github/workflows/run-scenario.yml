@@ -11,7 +11,6 @@ jobs:
     permissions:
       contents: write
       packages: read
-      pull-requests: write
 
     steps:
       - name: Checkout
@@ -25,13 +24,13 @@ jobs:
       - name: Install dependencies
         run: pip install tomli
 
-      - name: Generate docker-compose.yml and .env.example
+      - name: Generate docker-compose.yml
         run: python generate_compose.py --scenario scenario.toml
 
       - name: Create output directory
         run: mkdir -p output && chmod 777 output
 
-      - name: Export all secrets as environment variables
+      - name: Export secrets as environment variables
         env:
           SECRETS_JSON: ${{ toJSON(secrets) }}
         run: |
@@ -74,10 +73,20 @@ jobs:
           cp scenario.toml ${{ steps.metadata.outputs.submission_dir }}/
           cp output/results.json ${{ steps.metadata.outputs.submission_dir }}/
 
-      - name: Create submission branch from main
+      - name: Determine target repository
+        id: target
+        env:
+            GH_TOKEN: ${{ github.token }}
         run: |
-          git fetch origin main
-          git checkout -b ${{ steps.metadata.outputs.branch_name }} origin/main
+            PARENT_REPO=$(gh api repos/${{ github.repository }} --jq '.parent.full_name // "${{ github.repository }}"')
+            echo "Target repository: $PARENT_REPO"
+            echo "repo=$PARENT_REPO" >> $GITHUB_OUTPUT
+
+      - name: Create submission branch
+        run: |
+          git remote add upstream https://github.com/${{ steps.target.outputs.repo }}.git
+          git fetch upstream
+          git checkout -b ${{ steps.metadata.outputs.branch_name }} upstream/main
 
       - name: Commit results
         run: |
@@ -88,16 +97,14 @@ jobs:
 
           Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git push origin ${{ steps.metadata.outputs.branch_name }}
+          echo "::notice title=Submission Branch Created::Your results are ready for submission on branch: ${{ steps.metadata.outputs.branch_name }}. View it here: https://github.com/${{ github.repository }}/tree/${{ steps.metadata.outputs.branch_name }}/${{ steps.metadata.outputs.submission_dir }}"
 
-      - name: Create Pull Request
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Output PR link
         run: |
-          gh pr create \
-            --base main \
-            --head ${{ steps.metadata.outputs.branch_name }} \
-            --title "Submission: ${{ github.repository_owner }}" \
-            --body "Automated submission from workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "### Submit your results" >> $GITHUB_STEP_SUMMARY
+          echo "[Click here to open a pull request](https://github.com/${{ steps.target.outputs.repo }}/compare/main...${{ github.repository_owner }}:${{ steps.metadata.outputs.branch_name }}?expand=1)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ When creating the PR, UNCHECK 'Allow edits and access to secrets by maintainers' to protect your secrets." >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup
         if: always()
