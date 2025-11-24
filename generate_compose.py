@@ -14,6 +14,11 @@ except ImportError:
     except ImportError:
         print("Error: tomli required. Install with: pip install tomli")
         sys.exit(1)
+try:
+    import tomli_w
+except ImportError:
+    print("Error: tomli-w required. Install with: pip install tomli-w")
+    sys.exit(1)
 
 
 COMPOSE_PATH = "docker-compose.yml"
@@ -154,12 +159,7 @@ def generate_a2a_scenario(scenario: dict[str, Any]) -> str:
         )
 
     config_section = scenario.get("config", {})
-    config_lines = ["[config]"]
-    for key, value in config_section.items():
-        if isinstance(value, str):
-            config_lines.append(f"{key} = \"{value}\"")
-        else:
-            config_lines.append(f"{key} = {value}")
+    config_lines = [tomli_w.dumps({"config": config_section})]
 
     return A2A_SCENARIO_TEMPLATE.format(
         green_port=DEFAULT_PORT,
