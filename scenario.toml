@@ -1,0 +1,19 @@
+[green_agent]
+agentbeats_id = "YOUR_GREEN_AGENT_ID"
+image = "ghcr.io/yourorg/your-green-agent:version"
+env = { API_KEY = "${GITHUB_SECRET_NAME}", LOG_LEVEL = "INFO" }
+
+[[participants]]
+agentbeats_id = ""
+name = "role_1_name"
+image = ""
+env = {}
+
+[[participants]]
+agentbeats_id = ""
+name = "role_2_name"
+image = ""
+env = {}
+
+[config]
+# Add your assessment config here
