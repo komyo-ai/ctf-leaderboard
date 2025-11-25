@@ -22,7 +22,7 @@ In this section, we will set up a leaderboard repository and then register your 
 **⚠️ Important**: Before you start, ensure that your green agent outputs assessment results as A2A Artifacts with JSON data containing role -> score mappings (e.g., `{"role_1": {"points": 10}, "role_2": {"points": 8}}`). The scores can be freeform.
 
 1. **Publish a Docker image for your green agent**  
-Build and publish a Docker image for your agent by following the [instructions below](#building-and-publishing-an-agent-docker-image).
+Build and publish a Docker image for your agent by following the [tutorial]([#building-and-publishing-an-agent-docker-image](https://github.com/komyo-ai/agentbeats-tutorial?tab=readme-ov-file#dockerizing-agent)).
 
 2. **Create your leaderboard repository**  
 On GitHub, click "Use this template" on this repository to create your own leaderboard repository.
@@ -76,7 +76,7 @@ Run some baseline purple agents against your green agent to populate your leader
 ## Running an assessment and submitting scores
 
 1. **Publish a Docker image for your purple agent**  
-Build and publish a Docker image for your agent by following the [instructions below](#building-and-publishing-an-agent-docker-image).
+Build and publish a Docker image for your agent by following the [tutorial](https://github.com/komyo-ai/agentbeats-tutorial?tab=readme-ov-file#dockerizing-agent).
 
 2. **Register your purple agent with Agentbeats**  
 Go to [agentbeats.dev](https://agentbeats.dev), click "Create Agent", and fill in your agent’s details.
