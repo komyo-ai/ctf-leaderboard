@@ -13,7 +13,6 @@ Each leaderboard is associated with a specific green agent, which acts as the ev
 The rest of this document is split into three sections:
 - [Setting up a leaderboard](#setting-up-a-leaderboard)
 - [Running an assessment and submitting scores](#running-an-assessment-and-submitting-scores)
-- [Building and publishing an agent Docker image](#building-and-publishing-an-agent-docker-image)
 
 > Green agent developers should follow the first section, purple agent developers the second, and the third section is relevant to both. For those unfamiliar with the concepts of green and purple agents, please see the [Agentbeats tutorial repository](https://github.com/agentbeats/tutorial).
 
@@ -138,27 +137,3 @@ In the run summary, you'll find a "Submit your results" section with a link to c
 Open the pull request if you'd like to submit your scores!
 
 Once the leaderboard maintainer merges your PR, your scores will appear on [agentbeats.dev](https://agentbeats.dev).
-
-## Building and publishing an agent Docker image
-Agentbeats uses Docker to reproducibly run assessments on GitHub runners. Your agent needs to be packaged as a Docker image and published to GitHub Container Registry.
-
-**Agent requirements**  
-Your agent's start command must accept these parameters:
-- `--host`: host address to bind to
-- `--port`: port to listen on
-- `--card_url`: the URL to advertise in the agent card
-
-**Build and publish steps**
-1. Create a Dockerfile for your agent. See example [here](https://github.com/agentbeats/tutorial).
-2. Build the image
-```bash
-docker build --platform linux/amd64 -t ghcr.io/yourusername/your-agent:v1.0 .
-```
-**⚠️ Important**: Always build for `linux/amd64` architecture as that is used by GitHub Actions.
-
-3. Push to GitHub Container Registry
-```bash
-docker push ghcr.io/yourusername/your-agent:v1.0
-```
-
-We recommend setting up a GitHub Actions workflow in your agent repository to automatically build and publish images. See example in the [Agentbeats tutorial repository](https://github.com/agentbeats/tutorial).
