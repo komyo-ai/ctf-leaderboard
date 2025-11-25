@@ -1,0 +1,6 @@
+[
+    {
+        "name": "By points",
+        "query": "SELECT id, SUM(scores.points) AS Points FROM results GROUP BY id"
+    }
+]
