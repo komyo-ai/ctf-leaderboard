@@ -27,6 +27,7 @@ COMPOSE_TEMPLATE = """# Auto-generated from scenario.toml
 services:
   green-agent:
     image: {green_image}
+    platform: linux/amd64
     container_name: green-agent
     command: ["--host", "0.0.0.0", "--port", "{green_port}", "--card-url", "http://green-agent:{green_port}"]
     environment:{green_env}
@@ -43,6 +44,7 @@ services:
 {participant_services}
   agentbeats-client:
     image: ghcr.io/komyo-ai/agentbeats-client:v1.0.0
+    platform: linux/amd64
     container_name: agentbeats-client
     volumes:
       - ./a2a-scenario.toml:/app/scenario.toml
@@ -59,6 +61,7 @@ networks:
 
 PARTICIPANT_TEMPLATE = """  {name}:
     image: {image}
+    platform: linux/amd64
     container_name: {name}
     command: ["--host", "0.0.0.0", "--port", "{port}", "--card-url", "http://{name}:{port}"]
     environment:{env}
