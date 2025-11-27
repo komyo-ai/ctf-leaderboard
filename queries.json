@@ -1,6 +1,6 @@
 [
     {
         "name": "By points",
-        "query": "SELECT id, SUM(scores.points) AS Points FROM results GROUP BY id"
+        "query": "SELECT id, SUM(points) AS Points FROM (SELECT participants.red_a AS id, results[1].red_a.points AS points FROM results UNION ALL SELECT participants.red_b AS id, results[1].red_b.points AS points FROM results) GROUP BY id ORDER BY Points DESC;"
     }
 ]
